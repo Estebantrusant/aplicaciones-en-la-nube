@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Management Board</title>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Base Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Dark/Library Theme */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #1e2a36 100%); /* Deep Charcoal/Blue */
+            min-height: 100vh;
+            padding: 30px;
+        }
+
+        /* --- Global Components --- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            background: #ffffff;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border-left: 5px solid #3498db; /* Teal Accent */
+        }
+
+        .header h1 {
+            font-family: 'Merriweather', serif;
+            color: #2c3e50;
+            font-size: 32px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #3498db; /* Teal */
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-secondary {
+            background: #ecf0f1; /* Light Grey */
+            color: #34495e;
+        }
+
+        .btn-secondary:hover {
+            background: #bdc3c7;
+        }
+
+        /* --- Board Layout --- */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .column {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 400px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .column-title {
+            font-family: 'Merriweather', serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .column-count {
+            background: #3498db;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        /* --- Book Card Styles --- */
+        .cards {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-height: 100px;
+        }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid #dcdcdc;
+            border-radius: 6px;
+            padding: 15px;
+            cursor: grab;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            border-left: 5px solid transparent;
+        }
+
+        .card:hover {
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+            transform: translateY(-3px);
+            border-color: #3498db;
+        }
+        
+        .card.dragging {
+            opacity: 0.5;
+            box-shadow: none;
+        }
+
+        .card-title {
+            font-family: 'Merriweather', serif;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .card-description {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #ecf0f1;
+        }
+        
+        .card-tags {
+            margin-top: 8px;
+        }
+        
+        .tag {
+            background: #e6e9ed;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            color: #34495e;
+            margin-right: 5px;
+        }
+
+        /* Priority Badges - Using book cover colors */
+        .priority-badge {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .priority-low { background: #d4edda; color: #155724; } /* Green/Light Cover */
+        .priority-medium { background: #f8d7da; color: #721c24; } /* Red/Standard Cover */
+        .priority-high { background: #ffe0b2; color: #e65100; } /* Amber/Gold Cover */
+        .priority-critic { background: #34495e; color: white; } /* Dark/Special Edition */
+
+        /* Modal Styles */
+        .config-overlay, .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active { display: flex; }
+        .modal-content, .config-modal {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 550px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .form-group label {
+            font-weight: 500;
+            color: #34495e;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            margin-top: 5px;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-actions {
+            justify-content: flex-end; /* Corregido para estar a la derecha como en el original */
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: white;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div id="configOverlay" class="config-overlay">
+        <div class="config-modal">
+            <h2>🔑 API Configuración</h2>
+            <input type="text" id="apiUrl" placeholder="API URL (ej: https://api.example.com/prod)">
+            <input type="password" id="apiKey" placeholder="API Key">
+            <button onclick="saveConfig()">Conectar</button>
+        </div>
+    </div>
+
+    <div id="app" style="display: none;">
+        <div class="header">
+            <h1>📚 Mi Tablero de Lectura</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="openCreateModal()">+ Nuevo Libro</button>
+                <button class="btn btn-secondary" onclick="refreshBoard()">🔄 Actualizar</button>
+                <button class="btn btn-secondary" onclick="logout()">⚙️ Configurar</button>
+            </div>
+        </div>
+
+        <div id="errorContainer"></div>
+        <div id="loading" class="loading" style="display: none; color: #ffffff;">Cargando libros...</div>
+
+        <div class="board" id="board">
+            <div class="column">
+                <div class="column-header">
+                    <span class="column-title">⏳ Pendiente de leer</span>
+                    <span class="column-count" id="count-to do">0</span>
+                </div>
+                <div class="cards" data-status="to do" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            </div>
+
+            <div class="column">
+                <div class="column-header">
+                    <span class="column-title">📖 En lectura</span>
+                    <span class="column-count" id="count-doing">0</span>
+                </div>
+                <div class="cards" data-status="doing" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            </div>
+
+            <div class="column">
+                <div class="column-header">
+                    <span class="column-title">✅ Leído</span>
+                    <span class="column-count" id="count-done">0</span>
+                </div>
+                <div class="cards" data-status="done" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            </div>
+
+            <div class="column">
+                <div class="column-header">
+                    <span class="column-title">⏸ En espera</span>
+                    <span class="column-count" id="count-blocked">0</span>
+                </div>
+                <div class="cards" data-status="blocked" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="bookModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Nuevo Libro</h2>
+            <form id="bookForm">
+                <div class="form-group">
+                    <label>Título *</label>
+                    <input type="text" id="bookTitle" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Resumen</label>
+                    <textarea id="bookDescription"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select id="bookStatus">
+                        <option value="to do">Pendiente de leer (To Do)</option>
+                        <option value="doing">En lectura (Doing)</option>
+                        <option value="done">Leído (Done)</option>
+                        <option value="blocked">En espera (Blocked)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Prioridad / Importancia</label>
+                    <select id="bookPriority">
+                        <option value="low">Baja</option>
+                        <option value="medium" selected>Media</option>
+                        <option value="high">Alta</option>
+                        <option value="critic">Crítica</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Fecha Límite (Revisión/Entrega)</label>
+                    <input type="date" id="bookDueDate">
+                </div>
+
+                <div class="form-group">
+                    <label>Géneros/Tags (separados por coma)</label>
+                    <input type="text" id="bookTags" placeholder="Ficción, Ciencia, Desarrollo">
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Libro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let API_URL = '';
+        let API_KEY = '';
+        let currentBookId = null;
+        let books = [];
+
+        // --- Core API Functions ---
+
+        window.onload = () => {
+            const savedUrl = localStorage.getItem('apiUrl');
+            const savedKey = localStorage.getItem('apiKey');
+            
+            if (savedUrl && savedKey) {
+                document.getElementById('apiUrl').value = savedUrl;
+                document.getElementById('apiKey').value = savedKey;
+                saveConfig();
+            }
+        };
+
+        function saveConfig() {
+            const url = document.getElementById('apiUrl').value.trim();
+            const key = document.getElementById('apiKey').value.trim();
+
+            if (!url || !key) {
+                alert('Por favor, completa ambos campos');
+                return;
+            }
+
+            API_URL = url.endsWith('/') ? url.slice(0, -1) : url;
+            API_KEY = key;
+
+            localStorage.setItem('apiUrl', API_URL);
+            localStorage.setItem('apiKey', API_KEY);
+
+            document.getElementById('configOverlay').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+
+            loadBooks();
+        }
+
+        function logout() {
+            if (confirm('¿Seguro que quieres cambiar la configuración?')) {
+                document.getElementById('configOverlay').style.display = 'flex';
+                document.getElementById('app').style.display = 'none';
+            }
+        }
+
+        async function apiRequest(endpoint, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': API_KEY
+                }
+            };
+
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            const response = await fetch(`${API_URL}${endpoint}`, options);
+            
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
+                throw new Error(error.error || `Error ${response.status}`);
+            }
+
+            if (method === 'DELETE') {
+                return null;
+            }
+
+            return await response.json();
+        }
+
+        // --- Book Data Handling ---
+
+        async function loadBooks() {
+            try {
+                showLoading(true);
+                hideError();
+                
+                books = await apiRequest('/items'); 
+                renderBoard();
+            } catch (error) {
+                showError(`Error al cargar libros: ${error.message}. Usa el botón "⚙️ Configurar" para reintentar la conexión API.`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderBoard() {
+            const statuses = ['to do', 'doing', 'done', 'blocked']; 
+            
+            statuses.forEach(status => {
+                const container = document.querySelector(`.cards[data-status="${status}"]`);
+                container.innerHTML = '';
+                
+                const statusBooks = books
+                    .filter(b => b.status === status)
+                    .sort((a, b) => a.position - b.position);
+
+                statusBooks.forEach(book => {
+                    container.appendChild(createCard(book));
+                });
+
+                document.getElementById(`count-${status}`).textContent = statusBooks.length;
+            });
+        }
+
+        function createCard(book) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.draggable = true;
+            card.dataset.bookId = book.book_id; 
+            card.ondragstart = drag;
+
+            const tagsHtml = book.tags && book.tags.length > 0
+                ? `<div class="card-tags">${book.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>`
+                : '';
+
+            const descriptionHtml = book.description
+                ? `<div class="card-description">${book.description}</div>`
+                : '';
+                
+            const dueDate = book.due_date ? new Date(book.due_date).toLocaleDateString() : 'N/A';
+
+            card.innerHTML = `
+                <div class="card-title">${book.title}</div>
+                ${descriptionHtml}
+                <div class="card-meta">
+                    <span class="priority-badge priority-${book.priority}">${book.priority.toUpperCase()}</span>
+                    <span>Fecha: ${dueDate}</span>
+                </div>
+                ${tagsHtml}
+                <div class="card-actions">
+                    <button class="btn btn-primary" onclick="event.stopPropagation(); editBook('${book.book_id}')">✏️ Editar</button>
+                    <button class="btn btn-secondary" onclick="event.stopPropagation(); deleteBook('${book.book_id}')">🗑️</button>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // --- Drag and Drop Logic ---
+
+        function drag(ev) {
+            ev.dataTransfer.setData('bookId', ev.target.dataset.bookId);
+            setTimeout(() => ev.target.classList.add('dragging'), 0);
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        async function drop(ev) {
+            ev.preventDefault();
+            const bookId = ev.dataTransfer.getData('bookId');
+            const newStatus = ev.currentTarget.dataset.status;
+            
+            const bookElement = document.querySelector(`.card.dragging`);
+            if (bookElement) bookElement.classList.remove('dragging');
+
+            const book = books.find(b => b.book_id === bookId);
+            
+            if (book && book.status !== newStatus) {
+                try {
+                    await updateBookStatus(bookId, newStatus);
+                } catch (error) {
+                    showError(`Error al mover el libro: ${error.message}`);
+                }
+            }
+        }
+
+        async function updateBookStatus(bookId, newStatus) {
+            const book = books.find(b => b.book_id === bookId);
+            
+            const dataToSend = {
+                title: book.title,
+                description: book.description,
+                status: newStatus, 
+                priority: book.priority,
+                position: book.position,
+                due_date: book.due_date,
+                tags: book.tags
+            };
+
+            const updatedBook = await apiRequest(`/items/${bookId}`, 'PUT', dataToSend); 
+
+            const index = books.findIndex(b => b.book_id === bookId);
+            books[index] = updatedBook;
+            renderBoard();
+        }
+
+        // --- Modal and Form Logic ---
+
+        function openCreateModal() {
+            currentBookId = null;
+            document.getElementById('modalTitle').textContent = 'Añadir Nuevo Libro';
+            document.getElementById('bookForm').reset();
+            document.getElementById('bookModal').classList.add('active');
+        }
+
+        async function editBook(bookId) {
+            currentBookId = bookId;
+            const book = books.find(b => b.book_id === bookId);
+
+            document.getElementById('modalTitle').textContent = 'Editar Libro';
+            document.getElementById('bookTitle').value = book.title;
+            document.getElementById('bookDescription').value = book.description || '';
+            document.getElementById('bookStatus').value = book.status;
+            document.getElementById('bookPriority').value = book.priority;
+            document.getElementById('bookDueDate').value = book.due_date ? book.due_date.substring(0, 10) : ''; 
+            document.getElementById('bookTags').value = book.tags ? book.tags.join(', ') : '';
+
+            document.getElementById('bookModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('bookModal').classList.remove('active');
+            currentBookId = null;
+        }
+
+        document.getElementById('bookForm').onsubmit = async (e) => {
+            e.preventDefault();
+
+            const data = {
+                title: document.getElementById('bookTitle').value,
+                description: document.getElementById('bookDescription').value,
+                status: document.getElementById('bookStatus').value,
+                priority: document.getElementById('bookPriority').value,
+                due_date: document.getElementById('bookDueDate').value || null,
+                tags: document.getElementById('bookTags').value
+                    .split(',')
+                    .map(t => t.trim())
+                    .filter(t => t),
+                position: 0 
+            };
+
+            try {
+                if (currentBookId) {
+                    const updated = await apiRequest(`/items/${currentBookId}`, 'PUT', data); 
+                    const index = books.findIndex(b => b.book_id === currentBookId);
+                    books[index] = updated;
+                } else {
+                    const created = await apiRequest('/items', 'POST', data); 
+                    books.push(created);
+                }
+
+                renderBoard();
+                closeModal();
+            } catch (error) {
+                showError(`Error al guardar el libro: ${error.message}`);
+            }
+        };
+
+        async function deleteBook(bookId) {
+            if (!confirm('¿Estás seguro de eliminar este libro?')) {
+                return;
+            }
+
+            try {
+                await apiRequest(`/items/${bookId}`, 'DELETE'); 
+                books = books.filter(b => b.book_id !== bookId);
+                renderBoard();
+            } catch (error) {
+                showError(`Error al eliminar el libro: ${error.message}`);
+            }
+        }
+
+        function refreshBoard() {
+            loadBooks();
+        }
+
+        // --- Utility Functions ---
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const container = document.getElementById('errorContainer');
+            container.innerHTML = `<div class="error" style="background: #ffebee; color: #c62828; padding: 15px; border-radius: 8px; margin-bottom: 20px;">${message}</div>`;
+        }
+
+        function hideError() {
+            document.getElementById('errorContainer').innerHTML = '';
+        }
+
+        // Corregido: Cerrar modal al hacer clic fuera
+        document.getElementById('bookModal').onclick = (e) => {
+            if (e.target.id === 'bookModal') {
+                closeModal();
+            }
+        };
+    </script>
+</body>
+</html>

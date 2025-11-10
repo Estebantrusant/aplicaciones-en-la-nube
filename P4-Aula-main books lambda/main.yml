@@ -1,0 +1,377 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "API CRUD de Libros (Despliegue de Lambdas en Contenedores ECR y API Gateway)"
+
+# =========================================================
+# === PARÁMETROS DE CONFIGURACIÓN ===
+# =========================================================
+Parameters:
+  ECRRepoName:
+    Type: String
+    Default: books-app
+    Description: Mobre del ECR books-app.
+  
+  DBDynamoName:
+    Type: String
+    Default: books
+    Description: Nombre de la tabla DynamoDB para los libros.
+    
+# =========================================================
+# === API GATEWAY (REST API Y RECURSOS) ===
+# =========================================================
+Resources:
+  
+  # La API Principal
+  RestAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: books-items-api
+      EndpointConfiguration:
+        Types: ["REGIONAL"]
+
+  # Recurso /items
+  ItemsResource: 
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestAPI
+      ParentId: !GetAtt RestAPI.RootResourceId
+      PathPart: items
+
+  # Recurso /items/{book_id}
+  ItemByIdResource: 
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestAPI
+      ParentId: !Ref ItemsResource
+      PathPart: "{book_id}" 
+
+# =========================================================
+# === FUNCIONES LAMBDA (5x) ===
+# =========================================================
+
+  # --- CREATE (POST /items) ---
+  CreateBookLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: books-create
+      Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole" # Asume que el LabRole ya existe
+      PackageType: Image
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepoName}:create-book"
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          DB_DYNAMONAME: !Ref DBDynamoName
+          
+  # --- GET ALL (GET /items) ---
+  GetAllBooksLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: books-get-all
+      Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
+      PackageType: Image
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepoName}:get-all-books"
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          DB_DYNAMONAME: !Ref DBDynamoName
+
+  # --- GET BY ID (GET /items/{book_id}) ---
+  GetBookByIdLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: books-get-by-id
+      Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
+      PackageType: Image
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepoName}:get-by-id"
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          DB_DYNAMONAME: !Ref DBDynamoName
+
+  # --- UPDATE (PUT /items/{book_id}) ---
+  UpdateBookLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: books-update
+      Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
+      PackageType: Image
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepoName}:update-book"
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          DB_DYNAMONAME: !Ref DBDynamoName
+
+  # --- DELETE (DELETE /items/{book_id}) ---
+  DeleteBookLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: books-delete
+      Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole" 
+      PackageType: Image
+      Code:
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepoName}:delete-book"
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          DB_DYNAMONAME: !Ref DBDynamoName
+
+# =========================================================
+# === PERMISOS DE INVOCACIÓN (API Gateway -> Lambda) ===
+# =========================================================
+ 
+  # Permiso para POST /items
+  ApiGatewayInvokePermissionCreate:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt CreateBookLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestAPI}/*/*"
+  
+  # Permiso para GET /items
+  ApiGatewayInvokePermissionGetAll:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt GetAllBooksLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestAPI}/*/*"
+      
+  # Permiso para GET /items/{book_id}
+  ApiGatewayInvokePermissionGetById:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt GetBookByIdLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestAPI}/*/*"
+
+  # Permiso para PUT /items/{book_id}
+  ApiGatewayInvokePermissionUpdate:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt UpdateBookLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestAPI}/*/*"
+
+  # Permiso para DELETE /items/{book_id}
+  ApiGatewayInvokePermissionDelete:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt DeleteBookLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestAPI}/*/*"
+
+
+# =========================================================
+# === INTEGRACIÓN DE MÉTODOS (Lambda y MOCK CORS) ===
+# =========================================================
+
+  # POST /items (Create)
+  PostItemsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestAPI
+      ResourceId: !Ref ItemsResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateBookLambda.Arn}/invocations"
+        PassthroughBehavior: WHEN_NO_MATCH
+      MethodResponses:
+        - StatusCode: 201
+
+  # GET /items (Get All)
+  GetItemsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestAPI
+      ResourceId: !Ref ItemsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetAllBooksLambda.Arn}/invocations"
+        PassthroughBehavior: WHEN_NO_MATCH
+      MethodResponses:
+        - StatusCode: 200
+
+  # GET /items/{book_id} (Get One)
+  GetItemMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestAPI
+      ResourceId: !Ref ItemByIdResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetBookByIdLambda.Arn}/invocations"
+        PassthroughBehavior: WHEN_NO_MATCH
+      MethodResponses:
+        - StatusCode: 200
+  
+  # PUT /items/{book_id} (Update)
+  PutItemMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestAPI
+      ResourceId: !Ref ItemByIdResource
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateBookLambda.Arn}/invocations"
+        PassthroughBehavior: WHEN_NO_MATCH
+      MethodResponses:
+        - StatusCode: 200
+
+  # DELETE /items/{book_id} (Delete)
+  DeleteItemMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestAPI
+      ResourceId: !Ref ItemByIdResource
+      HttpMethod: DELETE
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteBookLambda.Arn}/invocations"
+        PassthroughBehavior: WHEN_NO_MATCH
+      MethodResponses:
+        - StatusCode: 204
+
+  # --- OPTIONS /items (CORS Pre-flight MOCK) ---
+  OptionsItemsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestAPI
+      ResourceId: !Ref ItemsResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          "application/json": '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,x-api-key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # --- OPTIONS /items/{book_id} (CORS Pre-flight MOCK) ---
+  OptionsItemMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestAPI
+      ResourceId: !Ref ItemByIdResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          "application/json": '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,x-api-key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+ 
+# =========================================================
+# === API KEY Y PLAN DE USO ===
+# =========================================================
+
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Name: books-api-key-lambdas
+      Enabled: true
+
+  UsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn: APIStage
+    Properties:
+      UsagePlanName: books-usage-plan-lambdas
+      ApiStages:
+        - ApiId: !Ref RestAPI
+          Stage: !Ref APIStage
+      Throttle:
+        RateLimit: 100
+        BurstLimit: 50
+      Quota:
+        Limit: 100000 
+        Period: MONTH
+
+  UsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref UsagePlan
+
+# =========================================================
+# === DEPLOYMENT Y STAGE ===
+# =========================================================
+
+  APIDeployment:
+    Type: AWS::ApiGateway::Deployment
+    # Depende de que todos los métodos estén definidos para un despliegue completo
+    DependsOn:
+      - PostItemsMethod
+      - GetItemsMethod
+      - GetItemMethod
+      - PutItemMethod
+      - DeleteItemMethod
+      - OptionsItemsMethod
+      - OptionsItemMethod
+    Properties:
+      RestApiId: !Ref RestAPI
+
+  APIStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref RestAPI
+      DeploymentId: !Ref APIDeployment
+      StageName: prod
+
+# =========================================================
+# === SALIDAS (OUTPUTS) ===
+# =========================================================
+Outputs:
+  ApiUrl:
+    Description: "URL base de la API de libros (ruta /prod)"
+    Value: !Sub "https://${RestAPI}.execute-api.${AWS::Region}.amazonaws.com/prod"
+  
+  ApiKeyValue:
+    Description: "Clave de API para el plan de uso"
+    Value: !Ref ApiKey

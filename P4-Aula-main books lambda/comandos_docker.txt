@@ -1,0 +1,19 @@
+docker build --provenance=false -t books-app:create-book -f ./lambdas/create_book/Dockerfile .
+docker tag books-app:create-book 767397937853.dkr.ecr.us-east-1.amazonaws.com/books-app:create-book
+docker push 767397937853.dkr.ecr.us-east-1.amazonaws.com/books-app:create-book
+
+docker build --provenance=false -t books-app:get-all-books -f ./lambdas/get_all_books/Dockerfile .
+docker tag books-app:get-all-books 767397937853.dkr.ecr.us-east-1.amazonaws.com/books-app:get-all-books
+docker push 767397937853.dkr.ecr.us-east-1.amazonaws.com/books-app:get-all-books
+
+docker build --provenance=false -t books-app:get-by-id -f ./lambdas/get_book_by_id/Dockerfile .
+docker tag books-app:get-by-id 767397937853.dkr.ecr.us-east-1.amazonaws.com/books-app:get-by-id
+docker push 767397937853.dkr.ecr.us-east-1.amazonaws.com/books-app:get-by-id
+
+docker build --provenance=false -t books-app:update-book -f ./lambdas/update_book/Dockerfile .
+docker tag books-app:update-book 767397937853.dkr.ecr.us-east-1.amazonaws.com/books-app:update-book
+docker push 767397937853.dkr.ecr.us-east-1.amazonaws.com/books-app:update-book
+
+docker build --provenance=false -t books-app:delete-book -f ./lambdas/delete_book/Dockerfile .
+docker tag books-app:delete-book 767397937853.dkr.ecr.us-east-1.amazonaws.com/books-app:delete-book
+docker push 767397937853.dkr.ecr.us-east-1.amazonaws.com/books-app:delete-book

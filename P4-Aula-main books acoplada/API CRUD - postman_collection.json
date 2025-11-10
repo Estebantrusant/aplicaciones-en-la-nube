@@ -1,0 +1,159 @@
+{
+	"info": {
+		"_postman_id": "bc196d3c-9cdf-451f-b444-928e427439da",
+		"name": "API CRUD - Proyecto Nube",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "49861304",
+		"_collection_link": "https://estebita-trujillo-2391263.postman.co/workspace/books~a0e9588d-dce6-45bf-a73e-7328a5924817/collection/49861304-bc196d3c-9cdf-451f-b444-928e427439da?action=share&source=collection_link&creator=49861304"
+	},
+	"item": [
+		{
+			"name": "New Request",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"book_id\": \"{{BookID}}\",\r\n  \"title\": \"Prueba Pricipal: Postman Web\",\r\n  \"description\": \"Elemento creado para testear el CRUD completo.\",\r\n  \"status\": \"to do\",\r\n  \"priority\": \"high\",\r\n  \"tags\": [\"postman-web\", \"crud\"]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{BaseURL}}/items",
+					"host": [
+						"{{BaseURL}}"
+					],
+					"path": [
+						"items"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "{{BaseURL}}/items/{{BookID}}",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{BaseURL}}/items/{{BookID}}",
+					"host": [
+						"{{BaseURL}}"
+					],
+					"path": [
+						"items",
+						"{{BookID}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "{{BaseURL}}/items",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{BaseURL}}/items",
+					"host": [
+						"{{BaseURL}}"
+					],
+					"path": [
+						"items"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "{{BaseURL}}/items/{{BookID}}",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "PUT",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"title\": \"Título ACTUALIZADO desde Postman Web\",\r\n  \"status\": \"done\" \r\n  // Solo se envían los campos que se quieren modificar, no es necesario enviar todos.\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{BaseURL}}/items/{{BookID}}",
+					"host": [
+						"{{BaseURL}}"
+					],
+					"path": [
+						"items",
+						"{{BookID}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "{{BaseURL}}/items/{{BookID}}",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{BaseURL}}/items/{{BookID}}",
+					"host": [
+						"{{BaseURL}}"
+					],
+					"path": [
+						"items",
+						"{{BookID}}"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
